@@ -69,7 +69,7 @@ void loop()                     // run over and over again
   Serial.print("Enrolling ID #");
   Serial.println(id);
   
-  while (!  getFingerprintEnroll() );
+  while ( getFingerprintEnroll() );//che lesi avevano invertito la condizione questi di adafruit
   Serial.println("------------------------------------ END OF FUCKING LOOP");
 }
 
@@ -210,4 +210,7 @@ uint8_t getFingerprintEnroll() {
     Serial.println("Unknown error");
     return p;
   }   
+
+  Serial.print("returning p as: "); Serial.println(p);
+  return p;
 }
