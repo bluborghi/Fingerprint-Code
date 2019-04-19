@@ -1,6 +1,10 @@
-int dataPin = 4;  // pin 14 on ic
-int latchPin = 5; // pin 12 on ic
-int clockPin = 6; // pin 11 on ic
+int buttonPin = 4;
+int dataPin = 5;  // pin 14 on ic
+int latchPin = 6; // pin 12 on ic
+int clockPin = 7; // pin 11 on ic
+int digitPins[] = {9, 10, 11, 12};
+
+
 
 byte counter = 0;
 
@@ -61,7 +65,7 @@ byte getStatus(int num) {
   if (num >= 0 && num < 8) {
     byte b = 15;
     bitClear(b, num);
-//    Serial.println(b);
+    //    Serial.println(b);
     return b;
   }
   return 0;
@@ -70,11 +74,14 @@ byte getStatus(int num) {
 void updateShiftRegister(byte digit, byte digitNumber)
 {
   digitalWrite(latchPin, LOW);
-//  unsigned long t1 = micros();
-  shiftOut(dataPin, clockPin, MSBFIRST, getStatus(digitNumber)); // getStatus(0) -> 1st = 1, getStatus(1) -> 2nd = 1, ... , getStatus(7) -> 8th = 1
+  //  unsigned long t1 = micros();
+  for (int i = 0; i < 4; i++) { // 0 -> 1st digit, 1 -> 2nd digit ......
+    if (3 - i == digitNumber) digitalWrite(digitPins[i], LOW);
+    else digitalWrite(digitPins[i], HIGH);
+  }
   shiftOut(dataPin, clockPin, MSBFIRST, digit); // 1st = A, 2nd = B, ... , 8th = dot
-//  unsigned long t2 = micros() - t1;
-//  Serial.println(t2);
+  //  unsigned long t2 = micros() - t1;
+  //  Serial.println(t2);
   digitalWrite(latchPin, HIGH);
   //debugDigit(digit, getStatus(digitNumber));
 }
@@ -86,34 +93,37 @@ void setup()
   pinMode(latchPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
+  for (int i = 0; i < 4; i++) {
+    pinMode(digitPins[i], OUTPUT);
+  }
 
-//  for (int i = 0; i <= 9; i++) {
-//    byte digit = getByteFromInt(i, true); //gets the digit
-//    updateShiftRegister(digit, 3); //writes the digit on the 4th spot
-//  }
+  //  for (int i = 0; i <= 9; i++) {
+  //    byte digit = getByteFromInt(i, true); //gets the digit
+  //    updateShiftRegister(digit, 3); //writes the digit on the 4th spot
+  //  }
 }
 
-void loop(){
+void loop() {
   unsigned long t1 = micros();
-  writeSingleDigit(1234,-1);
+  writeSingleDigit(1234, -1);
   unsigned long t2 = micros() - t1;
   Serial.println(t2);
 }
 
-int getSingleDigit(int fullNumber, int digitSpot){
+int getSingleDigit(int fullNumber, int digitSpot) {
   int power = 1;
-  for (int i = 0; i<digitSpot; i++) power *= 10;
-//  Serial.print("power: "); Serial.print(power);
-//  Serial.print(" fullNumber: "); Serial.println(fullNumber);
-  return (fullNumber/power)%10;
+  for (int i = 0; i < digitSpot; i++) power *= 10;
+  //  Serial.print("power: "); Serial.print(power);
+  //  Serial.print(" fullNumber: "); Serial.println(fullNumber);
+  return (fullNumber / power) % 10;
 }
 
-void writeSingleDigit(int fullNumber, int dotPosition){ //this is basically a multiplexing function
+void writeSingleDigit(int fullNumber, int dotPosition) { //this is basically a multiplexing function
   int currentInt = getSingleDigit(fullNumber, counter); //gets a single digit int
   bool writeDot = (dotPosition == counter);
   byte digit = getByteFromInt(currentInt, writeDot); //gets the digit from an int value
-//  Serial.print("Counter: "); Serial.print(counter);
-//  Serial.print(" currentInt: "); Serial.println(currentInt);
+  //  Serial.print("Counter: "); Serial.print(counter);
+  //  Serial.print(" currentInt: "); Serial.println(currentInt);
   updateShiftRegister(digit, counter); //writes the digit in the right spot
   counter ++;
   if (counter > 3) counter = 0;
