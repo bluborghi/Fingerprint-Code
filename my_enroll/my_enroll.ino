@@ -56,7 +56,6 @@ uint8_t readnumber(void) {
 
   if (Serial.available())
     num = Serial.parseInt();
-  else
     
   
   return num;
@@ -68,8 +67,10 @@ void loop()                     // run over and over again
     Serial.println("Ready to enroll a fingerprint!");
     Serial.println("Please type in the ID # (from 1 to 127) you want to save this finger as...");
   }
+  repeatMessage = true;
   id = readnumber();
   if (id == 0) {// ID #0 not allowed, try again!
+    repeatMessage = false;
     return;
   }
   Serial.print("Enrolling ID #");
