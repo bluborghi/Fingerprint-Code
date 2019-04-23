@@ -1,8 +1,10 @@
-int buttonPin = 4;
-int dataPin = 5;  // pin 14 on ic
-int latchPin = 6; // pin 12 on ic
-int clockPin = 7; // pin 11 on ic
-int digitPins[] = {9, 10, 11, 12};
+const int buttonPin = 4;
+const int dataPin = 5;  // pin 14 on ic
+const int latchPin = 6; // pin 12 on ic
+const int clockPin = 7; // pin 11 on ic
+const int digitPins[] = {9, 10, 11, 12};
+
+
 
 bool previousButtonState;
 unsigned long lastTimePressed;
@@ -68,7 +70,7 @@ void updateShiftRegister(byte digit, byte digitNumber)
 {
   digitalWrite(latchPin, LOW);
   //  unsigned long t1 = micros();
-  setDisplayDigit(digitNuber); // 0 -> 1st digit, 1 -> 2nd digit ......
+  setDisplayDigit(digitNumber); // 0 -> 1st digit, 1 -> 2nd digit ......
   shiftOut(dataPin, clockPin, MSBFIRST, digit); // 1st = A, 2nd = B, ... , 8th = dot
   //  unsigned long t2 = micros() - t1;
   //  Serial.println(t2);
@@ -129,10 +131,22 @@ void loop() {
 }
 
 void showPrediction(unsigned long& t) {
-  if (t < FIRST_STEP) writeString("----", -1);
-  else if (t < SECOND_STEP) writeString(" Add", -1);
-  else if (t < THIRD_STEP) writeString(" dEL", -1);
+  int dot = map(t % 4000, 0, 3999, 0, 3);
+  
+  if (t < 4000) writeString("----", dot);
+  else if (t < 8000) writeString(" Add", dot);
+  else if (t < 12000) writeString("----", dot);
+  else if (t < 16000) writeString(" dEL", dot);
   else writeString("----", -1);
+}
+
+int writeString(String s, int dotPosition) {
+  char currentChar = s.charAt(dotPosition);
+  bool writeDot = (dotPosition == counter);
+  byte digit = getByteFromChar(currentChar, writeDot); //gets the digit from a char
+  updateShiftRegister(digit, counter); //writes the digit in the right spot
+  counter ++;
+  if (counter > 3) counter = 0;
 }
 
 
