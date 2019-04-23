@@ -4,7 +4,8 @@ int latchPin = 6; // pin 12 on ic
 int clockPin = 7; // pin 11 on ic
 int digitPins[] = {9, 10, 11, 12};
 
-
+bool previousButtonState;
+unsigned long lastTimePressed;
 
 byte counter = 0;
 
@@ -23,6 +24,7 @@ const digit_type digit_7 = {1, 1, 1, 0, 0, 0, 0};
 const digit_type digit_8 = {1, 1, 1, 1, 1, 1, 1};
 const digit_type digit_9 = {1, 1, 1, 1, 0, 1, 1};
 const digit_type digit_blank = {0, 0, 0, 0, 0, 0, 0};
+const digit_type digit_dash = {0, 0, 0, 0, 0, 0, 1};
 
 byte getByteFromDigit(digit_type d, bool isDotted) {
   byte b;
@@ -49,6 +51,7 @@ byte getByteFromChar(char c, bool isDotted = 0) {
     case '7': return getByteFromDigit(digit_7, isDotted);
     case '8': return getByteFromDigit(digit_8, isDotted);
     case '9': return getByteFromDigit(digit_9, isDotted);
+    case '-': return getByteFromDigit(digit_dash, isDotted);
     case ' ':
     default: return getByteFromDigit(digit_blank, isDotted);
   }
@@ -61,29 +64,23 @@ byte getByteFromInt(byte i, bool isDotted = false) {
     return getByteFromChar(' ', isDotted);
 }
 
-byte getStatus(int num) {
-  if (num >= 0 && num < 8) {
-    byte b = 15;
-    bitClear(b, num);
-    //    Serial.println(b);
-    return b;
-  }
-  return 0;
-}
-
 void updateShiftRegister(byte digit, byte digitNumber)
 {
   digitalWrite(latchPin, LOW);
   //  unsigned long t1 = micros();
-  for (int i = 0; i < 4; i++) { // 0 -> 1st digit, 1 -> 2nd digit ......
-    if (3 - i == digitNumber) digitalWrite(digitPins[i], LOW);
-    else digitalWrite(digitPins[i], HIGH);
-  }
+  setDisplayDigit(digitNuber); // 0 -> 1st digit, 1 -> 2nd digit ......
   shiftOut(dataPin, clockPin, MSBFIRST, digit); // 1st = A, 2nd = B, ... , 8th = dot
   //  unsigned long t2 = micros() - t1;
   //  Serial.println(t2);
   digitalWrite(latchPin, HIGH);
   //debugDigit(digit, getStatus(digitNumber));
+}
+
+void setDisplayDigit(int n) { // 0 -> 1st digit, 1 -> 2nd digit ......
+  for (int i = 0; i < 4; i++) {
+    if (3 - i == n) digitalWrite(digitPins[i], LOW);
+    else digitalWrite(digitPins[i], HIGH);
+  }
 }
 
 void setup()
@@ -97,18 +94,47 @@ void setup()
     pinMode(digitPins[i], OUTPUT);
   }
 
-  //  for (int i = 0; i <= 9; i++) {
-  //    byte digit = getByteFromInt(i, true); //gets the digit
-  //    updateShiftRegister(digit, 3); //writes the digit on the 4th spot
-  //  }
+  pinMode(buttonPin, INPUT);
+  previousButtonState = LOW;
+  lastTimePressed = 0;
+
 }
 
 void loop() {
   unsigned long t1 = micros();
-  writeSingleDigit(1234, -1);
+
+  if (digitalRead(buttonPin)) {
+    if (previousButtonState == LOW) {
+      lastTimePressed = millis();
+    }
+    else { //still pressing, this is just a prediction of what is going to happen in case of release
+      unsigned long timePressed = millis() - lastTimePressed;
+      showPrediction(timePressed);
+    }
+
+  }
+  else {
+    if (previousButtonState == HIGH) { //the button has been released! Smithers, release the hounds
+      unsigned long timePressed = millis() - lastTimePressed;
+      if (timePressed < 1 * 1000) {}
+    }
+    else {//button is untouched, normal program flow
+      writeSingleDigit(1234, -1);//print 1234, no dot
+
+    }
+  }
+
   unsigned long t2 = micros() - t1;
   Serial.println(t2);
 }
+
+void showPrediction(unsigned long& t) {
+  if (t < FIRST_STEP) writeString("----", -1);
+  else if (t < SECOND_STEP) writeString(" Add", -1);
+  else if (t < THIRD_STEP) writeString(" dEL", -1);
+  else writeString("----", -1);
+}
+
 
 int getSingleDigit(int fullNumber, int digitSpot) {
   int power = 1;
