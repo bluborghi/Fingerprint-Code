@@ -1,13 +1,19 @@
+#include <Adafruit_Fingerprint.h>
+GG
 const int buttonPin = 4;
 const int dataPin = 5;  // pin 14 on ic
 const int latchPin = 6; // pin 12 on ic
 const int clockPin = 7; // pin 11 on ic
 const int digitPins[] = {9, 10, 11, 12};
+const unsigned long NUMBER_TIME_ON = 5000;
 
-
+SoftwareSerial mySerial(2, 3);
+Adafruit_Fingerprint myFingerprint = Adafruit_Fingerprint(&mySerial);
 
 bool previousButtonState;
 unsigned long lastTimePressed;
+
+unsigned long stopWriting = 0;
 
 byte counter = 0;
 
@@ -100,6 +106,7 @@ void setup()
   previousButtonState = LOW;
   lastTimePressed = 0;
 
+  fingerPrintStartup(myFingerprint);
 }
 
 void loop() {
@@ -121,8 +128,16 @@ void loop() {
       if (timePressed < 1 * 1000) {}
     }
     else {//button is untouched, normal program flow
-      writeSingleDigit(1234, -1);//print 1234, no dot
-
+      int id = getFingerprintID(myFingerprint);
+      if (id != -1) {
+        stopWriting = millis() + NUMBER_TIME_ON;
+      }
+      else if (millis() < stopWriting){
+        writeSingleDigit(1999, -1);//print 1999, no dot
+      }
+      else 
+        writeString("    ",3);
+      
     }
   }
 
@@ -132,7 +147,7 @@ void loop() {
 
 void showPrediction(unsigned long& t) {
   int dot = map(t % 4000, 0, 3999, 0, 3);
-  
+
   if (t < 4000) writeString("----", dot);
   else if (t < 8000) writeString(" Add", dot);
   else if (t < 12000) writeString("----", dot);
@@ -170,6 +185,40 @@ void writeSingleDigit(int fullNumber, int dotPosition) { //this is basically a m
 }
 
 
+void fingerPrintStartup(Adafruit_Fingerprint &finger) {
+  // set the data rate for the sensor serial port
+  finger.begin(57600);
+
+  if (finger.verifyPassword()) {
+    Serial.println("Found fingerprint sensor!");
+  } else {
+    Serial.println("Did not find fingerprint sensor :(");
+    while (1) {
+      delay(1);
+    }
+  }
+
+  finger.getTemplateCount();
+  Serial.print("Sensor contains "); Serial.print(finger.templateCount); Serial.println(" templates");
+  Serial.println("Waiting for valid finger...");
+}
+
+// returns -1 if failed, otherwise returns ID #
+int getFingerprintID(Adafruit_Fingerprint &finger) {
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return -1;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return -1;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return -1;
+
+  // found a match!
+  Serial.print("Found ID #"); Serial.print(finger.fingerID);
+  Serial.print(" with confidence of "); Serial.println(finger.confidence);
+  return finger.fingerID;
+}
 
 void debugDigit(byte d, byte s) { //seven segment display emulator on Serial
   Serial.print("Segments state:\t");
