@@ -1,5 +1,5 @@
 #include <Adafruit_Fingerprint.h>
-GG
+
 const int buttonPin = 4;
 const int dataPin = 5;  // pin 14 on ic
 const int latchPin = 6; // pin 12 on ic
@@ -128,15 +128,17 @@ void loop() {
       if (timePressed < 1 * 1000) {}
     }
     else {//button is untouched, normal program flow
-      int id = getFingerprintID(myFingerprint);
-      if (id != -1) {
-        stopWriting = millis() + NUMBER_TIME_ON;
-      }
-      else if (millis() < stopWriting){
+      if (millis() < stopWriting){
         writeSingleDigit(1999, -1);//print 1999, no dot
+      } 
+      else {
+        int id = getFingerprintID(myFingerprint);
+        if (id != -1) 
+          stopWriting = millis() + NUMBER_TIME_ON;
+        else 
+          writeString("    ",0);
       }
-      else 
-        writeString("    ",3);
+      
       
     }
   }
